@@ -3,7 +3,7 @@
 function print_help() {
     cat << EOF
 Usage: install [-h]
-       install [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [target2 ... ]]
+       install [-v] [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [target2 ... ]]
 
 Options:
     -h                 print this help message
@@ -12,6 +12,7 @@ Options:
     -l                only list available targets, do not run them
     -p                print information about each target. Implies -l
     -t                explicitly consider a target, even if the file doesn't have the "target" extension or the target specifies the disabled flag
+    -v                print all actions taken
 
 EOF
 
@@ -30,6 +31,7 @@ function update_pkg_list () {
         [ "$verbose" != "yes" ] && update="$update >/dev/null"
     fi
 
+    [ "$verbose" == "yes" ] && echo "$update"
     eval $update && updated_pkg_list="yes"
 }
 
@@ -45,8 +47,7 @@ function pkg-install () {
     # Find the available package manager
     if [ -z "$install" ]; then
         if hash apt-get 2>/dev/null; then
-            install="sudo apt-get install"
-            # [ "$verbose" != "yes" ] && install="$install -y" # TODO: debugging
+            install="sudo apt-get install -y"
         fi
     fi
 
@@ -55,14 +56,17 @@ function pkg-install () {
         return 2
     fi
 
-    # update_pkg_list TODO: debugging
+    update_pkg_list
 
     # Install the requested packages
     local cmd="$install $packages"
     [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
 
     while read -r pkgs; do
-        echo "$cmd $pkgs" # TODO: Debuggign
+        if [ -n "$pkgs" ]; then
+            [ "$verbose" == "yes" ] && echo "$cmd $pkgs"
+            eval "$cmd $pkgs"
+        fi
     done < <(grep -v '^#' "$file")
 }
 

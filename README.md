@@ -34,10 +34,11 @@ install [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [targ
 ```
 ```
 Options:
-    -h                 print this help message
+    -h                print this help message
     -g goodies-dir    set the directory where the goodies are located. Targets will receive this through the GOODIES_DIR variable. Default: goodies
     -d target-dir     set the directory where the targets are located. Default: install-targets
     -l                only list available targets, do not run them
     -p                print information about each target. Implies -l
     -t                explicitly consider a target, even if the file doesn't have the "target" extension or the target specifies the disabled flag
+    -v                print all actions taken
 ```

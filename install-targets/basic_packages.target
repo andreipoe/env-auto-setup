@@ -1,0 +1,5 @@
+#TARGET name packs
+#TARGET type pkg-install
+
+vim git
+tree htop
