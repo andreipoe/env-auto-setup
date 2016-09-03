@@ -1,0 +1,6 @@
+#TARGET name place-files-template
+#TARGET type place-files
+#TARGET disabled
+
+GOODIES_DIR/test.txt > ~/test.txt
+

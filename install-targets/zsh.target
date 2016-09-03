@@ -1,0 +1,4 @@
+#TARGET name zsh
+#TARGET type pkg-install
+
+zsh

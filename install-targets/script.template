@@ -1,0 +1,5 @@
+#!/bin/bash
+#TARGET name script-test
+#TARGET type script
+
+echo "Goodbye world!" | sed 's/Goodbye/Hello/'
