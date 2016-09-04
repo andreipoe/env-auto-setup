@@ -1,6 +1,12 @@
 #TARGET name place-files-template
 #TARGET type place-files
-#TARGET disabled
 
-GOODIES_DIR/test.txt > ~/test.txt
+# Lines starting with a '#' are ignored.
+# The sytax for each copy is: source > destination
+# Source paths are relative to the goodies directory ("goodies/" by default, can be set using -g), destination paths are relative to your home directory.
+# This means you can do "zshrc > .zshrc" to place your zshrc properly.
+# Folders are copied recursively.
 
+test.txt > test.txt
+test.d > recursive-works
+non-existent.md > fail.md

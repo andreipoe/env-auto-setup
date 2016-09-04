@@ -1,4 +1,7 @@
 #TARGET name zsh
 #TARGET type pkg-install
 
+# Lines starting with a '#' are ignored.
+# Each line will be passed to your package manager in turns, so separate packages with only a space.
+
 zsh

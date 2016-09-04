@@ -2,4 +2,7 @@
 #TARGET name script-test
 #TARGET type script
 
+# Write your shebang as the first line of the file, followed by the the TARGET parameters.
+# If you don't include a shebang, the script will be passed to bash.
+
 echo "Goodbye world!" | sed 's/Goodbye/Hello/'

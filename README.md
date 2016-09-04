@@ -25,7 +25,7 @@ The types are used as follows:
 
 There are templates for each target type in the install-targets directory.
 
-Inside targets, the `GOODIES_DIR` variable specifies the goodies directory. This is set to `goodies` by default, but can be specified using `-g`.
+The goodies directory is set to `goodies` by default, but can be specified using `-g`. Inside script targets, the `GOODIES_DIR` variable specifies the goodies directory. Place-file targets use paths relative to the goodies directory to copy files (see the template for more info).
 
 ## Command-line usage
 ```
