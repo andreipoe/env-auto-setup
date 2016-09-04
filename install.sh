@@ -86,7 +86,7 @@ function script () {
     cmd="$cmd $file"
     [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
 
-    eval "$cmd"
+    GOODIES_DIR="$goodies_dir" eval "$cmd"
 }
 
 # ------------------------
