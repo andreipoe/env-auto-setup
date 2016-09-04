@@ -11,7 +11,8 @@ Options:
     -d target-dir     set the directory where the targets are located. Default: install-targets
     -l                only list available targets, do not run them
     -p                print information about each target. Implies -l
-    -t                explicitly consider a target, even if the file doesn't have the "target" extension or the target specifies the disabled flag
+    -t                explicitly include a target file, even if the file doesn't have the "target" extension
+    -f                force running of targets even if they have the disabled flag
     -v                print all actions taken
 
 EOF
@@ -70,6 +71,24 @@ function pkg-install () {
     done < <(grep -v '^#' "$file")
 }
 
+function script () {
+    local file="$1"
+    local first_line=$(head -1 "$file")
+
+    # If the script has a shebang, then respect it, otherwise pass it to bash
+    local shebang=$(echo "$first_line" | sed 's/^#!//')
+    if [ -n "$shebang" ]; then
+        local cmd="$shebang"
+    else
+        local cmd="bash"
+    fi
+
+    cmd="$cmd $file"
+    [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
+
+    eval "$cmd"
+}
+
 # ------------------------
 
 target_dir="install-targets/"
@@ -78,12 +97,14 @@ show_help="no"
 list="no"
 print_info="no"
 verbose="no"
+all="no"
+force_disabled="no"
 
 target_files=()
+selected_target_files=()
 updated_pkg_list="no"
 
-# TODO: add -a flag
-while getopts ":hlpvd:g:t:" opt; do
+while getopts ":hlpvafd:g:t:" opt; do
     case $opt in
         l)
             list=yes
@@ -98,6 +119,12 @@ while getopts ":hlpvd:g:t:" opt; do
         v)
             verbose=yes
             ;;
+        a)
+            all=yes
+            ;;
+        f)
+            force_disabled=yes
+            ;;
         d)
             target_dir="$OPTARG"
             echo "Target directory: $target_dir"
@@ -110,6 +137,7 @@ while getopts ":hlpvd:g:t:" opt; do
             file=$(readlink -m "$OPTARG")
             if [ -f "$file" ]; then
                 target_files+=("$file")
+                selected_target_files+=("$file")
             else
                 echo "Ignoring target $OPTARG: file does not exist." >&2
             fi
@@ -134,10 +162,7 @@ echo "Targets directory: $target_dir"
 echo "Goodies directory: $goodies_dir"
 echo
 
-# Get the targets in the target directory
-# TODO: only do this for -a; by default, use the targets specified by the user
-# TODO: maybe change -t to -f
-# TODO: handle disabled targets
+# Get the available targets in the target directory
 for target_file in "$target_dir"/*.target ; do
     cleaned_target_file=$(readlink -m "$target_file")
     if grep -q -e "^#TARGET" "$cleaned_target_file"; then
@@ -146,6 +171,45 @@ for target_file in "$target_dir"/*.target ; do
         echo "Skipping target file $cleaned_target_file: no target information found." >&2
     fi
 done
+shift "$((OPTIND-1))"
+
+if [ "$#" == 0 -a "$all" != "yes" -a "${#selected_target_files[*]}" == 0 ]; then
+    echo "No target specified. Use -h for help and -l to print available targets."
+    exit 0
+fi
+
+# Targets specified with -t are selected by default
+for target_file in ${selected_target_files[@]}; do
+     name=$(grep "#TARGET name" "$target_file" | sed 's/#TARGET name //')
+     echo "Selected target: $name"
+done
+
+# Select the reuqested targets
+found_targets=()
+for target_file in ${target_files[@]}; do
+    name=$(grep "#TARGET name" "$target_file" | sed 's/#TARGET name //')
+    found=no
+    if [ "$all" == "yes" ]; then
+        found=yes
+    else
+        for target in $@; do
+            if [ "$name" == "$target" ]; then
+                selected_target_files+=("$target_file")
+                found=yes
+                found_targets+=("$name")
+            fi
+        done
+    fi
+
+    [ "$found" == "yes" ] && echo "Selected target: $name"
+done
+
+# Report unavailable targets
+if [ "$all" != "yes" ]; then
+    for target in $@; do
+        [[ ! " ${found_targets[@]} " =~ " $target " ]] && echo "Could not find target $target" >&2
+    done
+fi
 
 if [ "$list" == "yes" ]; then
     [ "$print_info" == "yes" ] && echo_cmd="echo" || echo_cmd="echo -n"
@@ -176,10 +240,19 @@ fi
 # Process targets
 [ "$verbose" == "yes" ] && echo_cmd="echo" || echo_cmd="echo -n"
 
-for target_file in ${target_files[@]}; do
+for target_file in ${selected_target_files[@]}; do
     name=$(grep "^#TARGET name" "$target_file" | sed 's/^#TARGET name //')
     type=$(grep "^#TARGET type" "$target_file" | sed 's/^#TARGET type //')
     [ -z "$type" ] && type="script"
+
+    if grep -q "^#TARGET disabled" "$target_file"; then
+        if [ "$force_disabled" != "yes" ]; then
+            echo "Skipping target $name: target is disabled"
+            continue
+        else
+            echo "Forced running diasbled target $name"
+        fi
+    fi
 
     case "$type" in
         script|pkg-install|place-files)
@@ -193,8 +266,12 @@ for target_file in ${target_files[@]}; do
 
     case "$type" in
         pkg-install)
-            pkg-install "$target_file"
+            # pkg-install "$target_file" # TODO: debugging
             ;;
+        script)
+            script "$target_file"
+            ;;
+        # TODO: copy
     esac
 
     if [ "$?" == 0 -a "$verbose" != "yes" ]; then

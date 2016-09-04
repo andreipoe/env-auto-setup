@@ -39,6 +39,7 @@ Options:
     -d target-dir     set the directory where the targets are located. Default: install-targets
     -l                only list available targets, do not run them
     -p                print information about each target. Implies -l
-    -t                explicitly consider a target, even if the file doesn't have the "target" extension or the target specifies the disabled flag
+    -t                explicitly include a target file, even if the file doesn't have the "target" extension
+    -f                force running of targets even if they have the disabled flag
     -v                print all actions taken
 ```

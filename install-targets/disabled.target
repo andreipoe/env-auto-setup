@@ -1,0 +1,7 @@
+#!/bin/bash
+#TARGET name disabled
+#TARGET type script
+#TARGET disabled
+
+echo "This should never happen!"
+

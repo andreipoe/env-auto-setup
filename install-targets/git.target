@@ -1,0 +1,11 @@
+#!/bin/bash
+#TARGET name git
+#TARGET type script
+
+git config --global user.name "Andrei Poenaru"
+git config --global user.email "andrei.poenaru@gmail.com"
+git config --global credential.helper "cache --timeout=1800"
+git config --global alias.lg "log --oneline --graph --decorate"
+git config --global alias.ca "commit -a"
+git config --global push.default simple
+
