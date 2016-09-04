@@ -173,11 +173,6 @@ for target_file in "$target_dir"/*.target ; do
 done
 shift "$((OPTIND-1))"
 
-if [ "$#" == 0 -a "$all" != "yes" -a "${#selected_target_files[*]}" == 0 ]; then
-    echo "No target specified. Use -h for help and -l to print available targets."
-    exit 0
-fi
-
 # Targets specified with -t are selected by default
 for target_file in ${selected_target_files[@]}; do
      name=$(grep "#TARGET name" "$target_file" | sed 's/#TARGET name //')
@@ -234,6 +229,12 @@ if [ "$list" == "yes" ]; then
         echo -e "\n\nUse -p to print information about each target."
     fi
 
+    exit 0
+fi
+
+# Check there are selected targets
+if [ "${#selected_target_files[*]}" == 0 ]; then
+    echo "No target specified. Use -h for help and -l to print available targets."
     exit 0
 fi
 
