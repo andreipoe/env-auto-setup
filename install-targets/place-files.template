@@ -10,3 +10,4 @@
 test.txt > test.txt
 test.d > recursive-works
 non-existent.md > fail.md
+/absolute > /absolute2

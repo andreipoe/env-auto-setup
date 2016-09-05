@@ -128,7 +128,8 @@ function place-files () {
 
         # Parse the source
         local source=$(echo ${parts[0]} | xargs) # Remove leading and trailing whitespace
-        source=$(readlink -m "$goodies_dir/$source") # Convert to full path
+        [[ "$source" == /* ]] && source=$(readlink -m "$source") || source=$(readlink -m "$goodies_dir/$source") # Convert to full path
+        echo "Source: $source"
 
         if [ ! -e "$source" ]; then
             echo "Cannot find source file: $source." >&2
@@ -137,7 +138,8 @@ function place-files () {
 
         # Parse the destination
         local dest=$(echo ${parts[1]} | xargs) # Remove leading and trailing whitespace
-        dest=$(readlink -m "$HOME/$dest") # Convert to full path
+        [[ "$dest" == /* ]] && dest=$(readlink -m "$dest") || dest=$(readlink -m "$HOME/$dest") # Convert to full path
+        echo "Destination: $dest"
 
         # Prepare the operations
         local cmd=""
