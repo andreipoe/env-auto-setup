@@ -183,6 +183,7 @@ force_disabled="no"
 
 target_files=()
 selected_target_files=()
+manual_targets=()
 updated_pkg_list="no"
 
 while getopts ":hlpvafd:g:t:" opt; do
@@ -218,6 +219,8 @@ while getopts ":hlpvafd:g:t:" opt; do
             file=$(readlink -m "$OPTARG")
             if [ -f "$file" ]; then
                 target_files+=("$file")
+                name=$(grep "#TARGET name" "$file" | sed 's/#TARGET name //')
+                manual_targets+=("$name")
             else
                 echo "Ignoring target $OPTARG: file does not exist." >&2
             fi
@@ -253,12 +256,6 @@ for target_file in "$target_dir"/*.target ; do
 done
 shift "$((OPTIND-1))"
 
-# Targets specified with -t are selected by default
-for target_file in ${selected_target_files[@]}; do
-     name=$(grep "#TARGET name" "$target_file" | sed 's/#TARGET name //')
-     echo "Selected target: $name"
-done
-
 # Select the reuqested targets
 found_targets=()
 for target_file in ${target_files[@]}; do
@@ -268,11 +265,12 @@ for target_file in ${target_files[@]}; do
         found=yes
         selected_target_files+=("$target_file")
     else
-        for target in $@; do
+        for target in "$@" "${manual_targets[@]}"; do
             if [ "$name" == "$target" ]; then
                 selected_target_files+=("$target_file")
                 found=yes
                 found_targets+=("$name")
+                break
             fi
         done
     fi
