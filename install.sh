@@ -76,8 +76,8 @@ function script () {
     local first_line=$(head -1 "$file")
 
     # If the script has a shebang, then respect it, otherwise pass it to bash
-    local shebang=$(echo "$first_line" | sed 's/^#!//')
-    if [ -n "$shebang" ]; then
+    if grep -q "^#!" <<<"$first_line"; then
+        local shebang=$(echo "$first_line" | sed 's/^#!//')
         local cmd="$shebang"
     else
         local cmd="bash"
@@ -216,7 +216,6 @@ while getopts ":hlpvafd:g:t:" opt; do
             file=$(readlink -m "$OPTARG")
             if [ -f "$file" ]; then
                 target_files+=("$file")
-                selected_target_files+=("$file")
             else
                 echo "Ignoring target $OPTARG: file does not exist." >&2
             fi
@@ -265,6 +264,7 @@ for target_file in ${target_files[@]}; do
     found=no
     if [ "$all" == "yes" ]; then
         found=yes
+        selected_target_files+=("$target_file")
     else
         for target in $@; do
             if [ "$name" == "$target" ]; then
