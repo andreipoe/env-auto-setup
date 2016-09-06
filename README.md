@@ -25,12 +25,12 @@ The types are used as follows:
 
 There are templates for each target type in the install-targets directory.
 
-The goodies directory is set to `goodies` by default, but can be specified using `-g`. Inside script targets, the `GOODIES_DIR` variable specifies the goodies directory. Place-file targets use paths relative to the goodies directory to copy files (see the template for more info).
+The goodies directory is set to `goodies` by default, but can be specified using `-g`. Inside `script` targets, the `GOODIES_DIR` variable specifies the goodies directory. `place-file` targets use paths relative to the goodies directory to copy files (see the template for more info).
 
 ## Command-line usage
 ```
 install [-h]
-install [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [target2 ... ]]
+install [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [-f] [target1 [target2 ... ]]
 ```
 ```
 Options:

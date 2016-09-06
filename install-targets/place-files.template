@@ -7,6 +7,10 @@
 # This means you can do "zshrc > .zshrc" to place your zshrc properly.
 # Folders are copied recursively.
 
+# Use #TARGET overwrite to replace existing files.
+# Use #TARGET append to append to existing files or merge directories (this replaces exisiting files inside directories)
+# Use #TARGET backup to create a backup before overwriting or appending. This is ignored if neither append nor overwrite are specified.
+
 test.txt > test.txt
 test.d > recursive-works
 non-existent.md > fail.md
