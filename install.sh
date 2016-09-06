@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ------------------------
+# utils
+
 function print_help() {
     cat << EOF
 Usage: install [-h]
@@ -19,8 +22,24 @@ EOF
 
 }
 
+# Find the available package manager
+function find_pkg_manager () {
+    if [ -z "$install" ]; then
+        if hash apt-get 2>/dev/null; then
+            install="sudo apt-get install -y"
+        fi
+    fi
+}
+
 function update_pkg_list () {
     [ "$updated_pkg_list" == "yes" ] && return
+
+    find_pkg_manager
+
+    if [ -z "$install" ]; then
+        echo "${FUNCNAME[1]}: no known package manager found." >&2
+        return 2
+    fi
 
     if [ "$verbose" == "yes" ]; then
         echo "Updating package repositories."
@@ -36,50 +55,96 @@ function update_pkg_list () {
     eval $update && updated_pkg_list="yes"
 }
 
+function call_pkg_installer () {
+    local packages="$@"
+
+    find_pkg_manager
+
+    if [ -z "$install" ]; then
+        echo "${FUNCNAME[1]}: no known package manager found." >&2
+        return 2
+    fi
+
+    # Install the requested packages
+    local cmd="$install"
+    [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
+
+    if [ -n "$packages" ]; then
+        [ "$verbose" == "yes" ] && echo "$cmd $packages"
+        eval "$cmd $packages"
+    fi
+}
+
+# end utils
 # ------------------------
+# target types
 
 function pkg-install () {
     local file="$1"
+    shift
+    local args=("${@}")
+
     if [ -z "$file" ]; then
         echo "${FUNCNAME[0]}: no file specified." >&2
         return 1
     fi
 
-    # Find the available package manager
-    if [ -z "$install" ]; then
-        if hash apt-get 2>/dev/null; then
-            install="sudo apt-get install -y"
-        fi
-    fi
+    # Target type pkg-install takes no arguments
+    for arg in "${args[@]}"; do
+        case "$arg" in
+            "")
+                ;; # Skip empty args
+            *)
+                echo "${FUNCNAME[0]}: ignoriong unknown argument $arg"
+                ;;
+        esac
+    done
+
+    find_pkg_manager
+    update_pkg_list
 
     if [ -z "$install" ]; then
         echo "${FUNCNAME[0]}: no known package manager found." >&2
         return 2
     fi
 
-    update_pkg_list
 
-    # Install the requested packages
-    local cmd="$install $packages"
-    [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
 
     while read -r pkgs; do
-        if [ -n "$pkgs" ]; then
-            [ "$verbose" == "yes" ] && echo "$cmd $pkgs"
-            eval "$cmd $pkgs"
-        fi
+        [ -n "$pkgs" ] && call_pkg_installer "$pkgs"
     done < <(grep -v '^#' "$file")
 }
 
 function script () {
     local file="$1"
+    shift
+    local args=("${@}")
+
+    # Target type script takes no arguments
+    for arg in "${args[@]}"; do
+        case "$arg" in
+            "")
+                ;; # Skip empty args
+            *)
+                if [ "$arg" == "${args[0]}" ] && hash "$arg" 2>/dev/null; then
+                    # TODO: This is a workaround to avoid "ignoring unknow argument python"-type messages. It's not great, but it works for now.
+                    [ "$verbose" == "yes" ] && echo "Found interpreter argument: $arg"
+                else
+                    echo "${FUNCNAME[0]}: ignoriong unknown argument $arg"
+                fi
+                ;;
+        esac
+    done
+
     local first_line=$(head -1 "$file")
 
-    # If the script has a shebang, then respect it, otherwise pass it to bash
+    # If the script has a shebang, respect it
     if grep -q "^#!" <<<"$first_line"; then
         local shebang=$(echo "$first_line" | sed 's/^#!//')
         local cmd="$shebang"
-    else
+    elif hash "$1" 2>/dev/null; then  # Otherwise check if an interpreter has been passed as the first argument
+        cmd="$1"
+    else # otherwise pass it to bash
         local cmd="bash"
     fi
 
@@ -91,23 +156,32 @@ function script () {
 
 function place-files () {
     local file="$1"
+    shift
+    local args=("${@}")
 
-    # Read the copy-specific options
-    if grep -q "^#TARGET overwrite" "$file"; then
-        local overwrite=yes
-    else
-        local overwrite=no
-    fi
-    if grep -q "^#TARGET append" "$file"; then
-        local append=yes
-    else
-        local append=no
-    fi
-    if grep -q "^#TARGET backup" "$file"; then
-        local backup=yes
-    else
-        local backup=no
-    fi
+    # Read the type-specific options
+    local overwrite=no
+    local append=no
+    local backup=no
+
+    for arg in "${args[@]}"; do
+        case "$arg" in
+            overwrite)
+                overwrite=yes
+                ;;
+            append)
+                append=yes
+                ;;
+            backup)
+                backup=yes
+                ;;
+            "")
+                ;; # Skip empty args
+            *)
+                echo "${FUNCNAME[0]}: ignoriong unknown argument $arg"
+                ;;
+        esac
+    done
 
     # Don't make a backup if neither appending nor overwriting
     if [ "$overwrite" != "yes" -a "$append" != "yes" -a "$backup" == "yes" ]; then
@@ -129,7 +203,6 @@ function place-files () {
         # Parse the source
         local source=$(echo ${parts[0]} | xargs) # Remove leading and trailing whitespace
         [[ "$source" == /* ]] && source=$(readlink -m "$source") || source=$(readlink -m "$goodies_dir/$source") # Convert to full path
-        echo "Source: $source"
 
         if [ ! -e "$source" ]; then
             echo "Cannot find source file: $source." >&2
@@ -139,7 +212,6 @@ function place-files () {
         # Parse the destination
         local dest=$(echo ${parts[1]} | xargs) # Remove leading and trailing whitespace
         [[ "$dest" == /* ]] && dest=$(readlink -m "$dest") || dest=$(readlink -m "$HOME/$dest") # Convert to full path
-        echo "Destination: $dest"
 
         # Prepare the operations
         local cmd=""
@@ -155,7 +227,7 @@ function place-files () {
                     cmd="$cmd cp -a $source $dest"
                 fi
             else
-                echo "Destination file already exists: $dest." >&2
+                echo -n "Destination file already exists: $dest. " >&2
                 echo "Use #TARGET overwrite or append if this is intended." >&2
                 continue
             fi
@@ -170,7 +242,53 @@ function place-files () {
     done < <(grep -v '^#' "$file")
 }
 
+function batch () {
+    local file="$1"
+    shift
+    local args=("${@}")
+
+    while IFS=':' read -ra parts; do
+        [ -z "${parts[*]}" ] && continue # Skip empty lines
+        if [ "${#parts[*]}" != 2 ]; then
+            echo "Skipping improprely formatted line: \"${parts[*]}\"" >&2
+            continue
+        fi
+
+        # Figure out the instruction type and arguments
+        local type=$(echo ${parts[0]} | cut -d ',' -f1)
+        local instr_args=$(echo ${parts[0]} | cut -d ',' -s --complement -f1 | tr ',' ' ')
+
+        # Run the instruction
+        case "$type" in
+            pkg-install)
+                call_pkg_installer "${parts[1]}"
+                ;;
+            script)
+                [[ "${parts[1]}" == /* ]] && local script_file=$(readlink -m "${parts[1]}") || local script_file=$(readlink -m "$goodies_dir/${parts[1]}") # Convert to full path
+                script "$script_file" "${instr_args[@]}"
+                ;;
+            place-files)
+                # TODO: This is a hack because I think refactoring place-files would lead to even worse and more wet code. It's not ideal and should be replaced with something more clever
+                # Create a temp file and feed it to place-files
+                local tmpfile="/tmp/env-auto-setup_batch-place-files"
+                echo "${parts[1]}" > "$tmpfile"
+                eval "$type $tmpfile ${instr_args[@]}"
+                rm "$tmpfile"
+                ;;
+            batch)
+                echo "Skipping instruction \"${parts[1]}\": recursive batch actions are not supported" >&2
+                ;;
+            *)
+                echo "Skipping instruction \"${parts[1]}\": unknown type $type" >&2
+                ;;
+        esac
+
+    done < <(grep -v '^#' "$file")
+}
+
+# end target types
 # ------------------------
+# main
 
 target_dir="install-targets/"
 goodies_dir="goodies/"
@@ -285,6 +403,7 @@ if [ "$all" != "yes" ]; then
     done
 fi
 
+# Print target info if requested with -l or -p
 if [ "$list" == "yes" ]; then
     [ "$print_info" == "yes" ] && echo_cmd="echo" || echo_cmd="echo -n"
 
@@ -325,9 +444,11 @@ echo
 for target_file in ${selected_target_files[@]}; do
     name=$(grep "^#TARGET name" "$target_file" | sed 's/^#TARGET name //')
     type=$(grep "^#TARGET type" "$target_file" | sed 's/^#TARGET type //')
+    args=$(grep "^#TARGET " "$target_file" | grep -Ev "^#TARGET name|^#TARGET type" | sed 's/^#TARGET //' | tr '\n' ' ')
     [ -z "$type" ] && type="script"
 
-    if grep -q "^#TARGET disabled" "$target_file"; then
+    # Don't run disabled targets, unless forcing with -f
+    if [[ ${args[*]} =~ "disabled" ]]; then
         if [ "$force_disabled" != "yes" ]; then
             echo "Skipping target $name: target is disabled"
             continue
@@ -336,9 +457,11 @@ for target_file in ${selected_target_files[@]}; do
         fi
     fi
 
+    # Run recognised target types
     case "$type" in
-        script|pkg-install|place-files)
-            $echo_cmd "Running $type target $name... "
+        script|pkg-install|place-files|batch)
+            echo "------------------------------"
+            echo "Running $type target $name... "
             ;;
         *)
             echo "Skipping target $name: unkown type $type." >&2
@@ -346,19 +469,8 @@ for target_file in ${selected_target_files[@]}; do
             ;;
     esac
 
-    case "$type" in
-        pkg-install)
-            pkg-install "$target_file"
-            ;;
-        script)
-            script "$target_file"
-            ;;
-        place-files)
-            place-files "$target_file"
-            ;;
-    esac
-
-    if [ "$?" == 0 -a "$verbose" != "yes" ]; then
-        echo "Done"
-    fi
+    eval "$type $target_file ${args[@]}"
 done
+
+# end main
+# ------------------------

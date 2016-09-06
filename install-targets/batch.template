@@ -1,0 +1,18 @@
+#TARGET name batch-template
+#TARGET type batch
+
+# Lines starting with a '#' are ignored.
+# The sytax for each action is "type[,arg1,arg2...]:instruction"
+# "type" is any target type, "arg" are type-specific parameters, "instruction" is a type-specific target line
+# Script paths and place-files source paths start in the goodies directory.
+
+# Syntax: pkg-install:package1 [package2 ...]
+pkg-install:vim
+
+# Syntax: script[,interpreter]:file [arg1 [arg2 ...]]
+script:test_script.sh
+script,python:test_script.py
+
+# Syntax: place-files[,overwrite][,append][,backup]:source > destination
+place-files:test.txt > test.txt
+place-files,append,backup:test.txt > test2.txt

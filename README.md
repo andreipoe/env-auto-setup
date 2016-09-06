@@ -22,6 +22,7 @@ The types are used as follows:
 | `script`      | For executable scripts. Note these will be executed as-is, so make sure you have execute permission on them. |
 | `pkg-install` | For list of packages that should be installed using the distribution's default package manager. Only apt-get is supported for now. |
 | `place-files` | For copying files to specified locations. |
+| `batch`       | For running a series of other targets in one go. |
 
 There are templates for each target type in the install-targets directory.
 
