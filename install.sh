@@ -6,7 +6,7 @@
 function print_help() {
     cat << EOF
 Usage: install [-h]
-       install [-v] [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [target2 ... ]]
+       install [-s] [-v] [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [target1 [target2 ... ]]
 
 Options:
     -h                 print this help message
@@ -17,6 +17,7 @@ Options:
     -t                explicitly include a target file, even if the file doesn't have the "target" extension
     -f                force running of targets even if they have the disabled flag
     -v                print all actions taken
+    -s                only echo commands, do not execute them. This is meant for testing only
 
 EOF
 
@@ -52,7 +53,12 @@ function update_pkg_list () {
     fi
 
     [ "$verbose" == "yes" ] && echo "$update"
-    eval $update && updated_pkg_list="yes"
+    if [ "$simulate" == "yes" ]; then
+        echo "$simtag: $update"
+    else
+        eval $update
+    fi
+    [ "$?" == 0 ] && updated_pkg_list="yes"
 }
 
 function call_pkg_installer () {
@@ -71,7 +77,11 @@ function call_pkg_installer () {
 
     if [ -n "$packages" ]; then
         [ "$verbose" == "yes" ] && echo "$cmd $packages"
-        eval "$cmd $packages"
+        if [ "$simulate" == "yes" ]; then
+            echo "$simtag: $cmd $pkgs"
+        else
+            eval "$cmd $packages"
+        fi
     fi
 }
 
@@ -151,7 +161,11 @@ function script () {
     cmd="$cmd $file"
     [ "$verbose" != "yes" ] && cmd="$cmd >/dev/null"
 
-    GOODIES_DIR="$goodies_dir" eval "$cmd"
+    if [ "$simulate" == "yes" ]; then
+        echo "$simtag: GOODIES_DIR=$goodies_dir $cmd"
+    else
+        GOODIES_DIR="$goodies_dir" eval "$cmd"
+    fi
 }
 
 function place-files () {
@@ -299,12 +313,15 @@ verbose="no"
 all="no"
 force_disabled="no"
 
+simulate="no"
+simtag="simulated"
+
 target_files=()
 selected_target_files=()
 manual_targets=()
 updated_pkg_list="no"
 
-while getopts ":hlpvafd:g:t:" opt; do
+while getopts ":hlpvafsd:g:t:" opt; do
     case $opt in
         l)
             list=yes
@@ -324,6 +341,10 @@ while getopts ":hlpvafd:g:t:" opt; do
             ;;
         f)
             force_disabled=yes
+            ;;
+        s)
+            simulate=yes
+            echo "This is only a simulation. Your system will not be modified."
             ;;
         d)
             target_dir="$OPTARG"

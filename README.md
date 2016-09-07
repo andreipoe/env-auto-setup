@@ -31,7 +31,7 @@ The goodies directory is set to `goodies` by default, but can be specified using
 ## Command-line usage
 ```
 install [-h]
-install [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [-f] [target1 [target2 ... ]]
+install [-s] [-v] [-g goodies-dir] [-d target-dir] [-l|-p] [-t target-file] [-f] [target1 [target2 ... ]]
 ```
 ```
 Options:
@@ -43,4 +43,5 @@ Options:
     -t                explicitly include a target file, even if the file doesn't have the "target" extension
     -f                force running of targets even if they have the disabled flag
     -v                print all actions taken
+    -s                only echo commands, do not execute them. This is meant for testing only
 ```
