@@ -251,7 +251,11 @@ function place-files () {
 
         # Copy the files
         [ "$verbose" == "yes" ] && echo "$cmd"
-        eval "$cmd"
+        if [ "$simulate" == "yes" ]; then
+            echo "$simtag: $cmd"
+        else
+            eval "$cmd"
+        fi
 
     done < <(grep -v '^#' "$file")
 }
