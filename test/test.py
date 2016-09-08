@@ -151,6 +151,7 @@ init_lists()
 all_ok=True
 
 # Run a test for each type
+# TODO: Would it be better to run several tests? Perhaps until stopped or with a -n flag?
 for type in TARGET_TYPE_LIST:
     target = create_test_target(type)
     output = sp.check_output(install_script_cmd + [test_dir+"/"+target], universal_newlines=True, cwd=base_dir)
@@ -163,8 +164,5 @@ for type in TARGET_TYPE_LIST:
 
 if all_ok:
     print("All tests passed.")
-
-# TODO: run several tests
-# TODO: add a README
 
 # TODO: batch targets
