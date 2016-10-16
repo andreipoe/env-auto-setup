@@ -26,7 +26,9 @@ EOF
 # Find the available package manager
 function find_pkg_manager () {
     if [ -z "$install" ]; then
-        if hash apt-get 2>/dev/null; then
+        if hash zypper 2>/dev/null; then
+            install="sudo zypper -n install"
+        elif hash apt-get 2>/dev/null; then
             install="sudo apt-get install -y"
         fi
     fi
@@ -47,7 +49,9 @@ function update_pkg_list () {
     fi
 
     # Find the available package manager
-    if hash apt-get 2>/dev/null; then
+    if hash zypper 2>/dev/null; then
+        : # do nothing
+    elif hash apt-get 2>/dev/null; then
         local update="sudo apt-get update"
         [ "$verbose" != "yes" ] && update="$update >/dev/null"
     fi
